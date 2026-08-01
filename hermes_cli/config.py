@@ -852,6 +852,7 @@ def _ensure_default_soul_md(home: Path) -> None:
         # Legacy empty template -> upgrade to the real default in place.
     soul_path.write_text(DEFAULT_SOUL_MD, encoding="utf-8")
     _secure_file(soul_path)
+
 def _ensure_default_identity_md(home: Path) -> None:
     identity_path = home / "IDENTITY.md"
     if identity_path.exists():
@@ -918,8 +919,9 @@ def ensure_hermes_home():
             d = home / subdir
             d.mkdir(parents=True, exist_ok=True)
             _secure_dir(d)
-        _ensure_default_soul_md(home)
-
+       _ensure_default_soul_md(home)
+       _ensure_default_identity_md(home)
+       _ensure_default_bootstrap_md(home)
     _HERMES_HOME_ENSURED.add(key)
 
 
@@ -941,9 +943,10 @@ def _ensure_hermes_home_managed(home: Path):
     # In managed mode the activation script may not know about this subdir,
     # so we mkdir it ourselves (it's inside an already-secured logs/ dir).
     (home / "logs" / "curator").mkdir(parents=True, exist_ok=True)
-    # Inside umask(0o007) scope — SOUL.md will be created as 0660
+   # Inside umask(0o007) scope — SOUL.md/IDENTITY.md/BOOTSTRAP.md will be created as 0660
     _ensure_default_soul_md(home)
-
+    _ensure_default_identity_md(home)
+    _ensure_default_bootstrap_md(home)
 
 # =============================================================================
 # Config loading/saving
