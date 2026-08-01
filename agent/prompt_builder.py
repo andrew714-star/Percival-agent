@@ -2016,7 +2016,56 @@ def load_soul_md(context_length: Optional[int] = None) -> Optional[str]:
     except Exception as e:
         logger.debug("Could not read SOUL.md from %s: %s", soul_path, e)
         return None
+def load_identity_md(context_length: Optional[int] = None) -> Optional[str]:
+    """Load IDENTITY.md from HERMES_HOME and return its content, or None."""
+    try:
+        from hermes_cli.config import ensure_hermes_home
+        ensure_hermes_home()
+    except Exception as e:
+        logger.debug("Could not ensure HERMES_HOME before loading IDENTITY.md: %s", e)
 
+    identity_path = get_hermes_home() / "IDENTITY.md"
+    if not identity_path.exists():
+        return None
+    try:
+        content = identity_path.read_text(encoding="utf-8").strip()
+        if not content:
+            return None
+        content = _scan_context_content(content, "IDENTITY.md")
+        content = _truncate_content(
+            content, "IDENTITY.md", context_length=context_length,
+            read_path=str(identity_path),
+        )
+        return content
+    except Exception as e:
+        logger.debug("Could not read IDENTITY.md from %s: %s", identity_path, e)
+        return None
+
+
+def load_bootstrap_md(context_length: Optional[int] = None) -> Optional[str]:
+    """Load BOOTSTRAP.md from HERMES_HOME and return its content, or None."""
+    try:
+        from hermes_cli.config import ensure_hermes_home
+        ensure_hermes_home()
+    except Exception as e:
+        logger.debug("Could not ensure HERMES_HOME before loading BOOTSTRAP.md: %s", e)
+
+    bootstrap_path = get_hermes_home() / "BOOTSTRAP.md"
+    if not bootstrap_path.exists():
+        return None
+    try:
+        content = bootstrap_path.read_text(encoding="utf-8").strip()
+        if not content:
+            return None
+        content = _scan_context_content(content, "BOOTSTRAP.md")
+        content = _truncate_content(
+            content, "BOOTSTRAP.md", context_length=context_length,
+            read_path=str(bootstrap_path),
+        )
+        return content
+    except Exception as e:
+        logger.debug("Could not read BOOTSTRAP.md from %s: %s", bootstrap_path, e)
+        return None
 
 def _load_hermes_md(cwd_path: Path, context_length: Optional[int] = None) -> str:
     """.hermes.md / HERMES.md — walk to git root."""
