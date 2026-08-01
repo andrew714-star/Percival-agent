@@ -320,8 +320,12 @@ _EXTRA_ENV_KEYS = frozenset({
 import yaml
 
 from hermes_cli.colors import Colors, color
-from hermes_cli.default_soul import DEFAULT_SOUL_MD, is_legacy_template_soul
-
+from hermes_cli.default_soul import (
+    DEFAULT_SOUL_MD,
+    DEFAULT_IDENTITY_MD,
+    DEFAULT_BOOTSTRAP_MD,
+    is_legacy_template_soul,
+)
 
 # =============================================================================
 # Managed mode (NixOS declarative config)
@@ -848,7 +852,20 @@ def _ensure_default_soul_md(home: Path) -> None:
         # Legacy empty template -> upgrade to the real default in place.
     soul_path.write_text(DEFAULT_SOUL_MD, encoding="utf-8")
     _secure_file(soul_path)
+def _ensure_default_identity_md(home: Path) -> None:
+    identity_path = home / "IDENTITY.md"
+    if identity_path.exists():
+        return
+    identity_path.write_text(DEFAULT_IDENTITY_MD, encoding="utf-8")
+    _secure_file(identity_path)
 
+
+def _ensure_default_bootstrap_md(home: Path) -> None:
+    bootstrap_path = home / "BOOTSTRAP.md"
+    if bootstrap_path.exists():
+        return
+    bootstrap_path.write_text(DEFAULT_BOOTSTRAP_MD, encoding="utf-8")
+    _secure_file(bootstrap_path)
 
 # Home paths whose directory skeleton has been created this process — see
 # ensure_hermes_home(). Only successful passes are recorded, so a raised
