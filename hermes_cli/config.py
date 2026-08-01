@@ -919,9 +919,9 @@ def ensure_hermes_home():
             d = home / subdir
             d.mkdir(parents=True, exist_ok=True)
             _secure_dir(d)
-       _ensure_default_soul_md(home)
-       _ensure_default_identity_md(home)
-       _ensure_default_bootstrap_md(home)
+        _ensure_default_soul_md(home)
+        _ensure_default_identity_md(home)
+        _ensure_default_bootstrap_md(home)
     _HERMES_HOME_ENSURED.add(key)
 
 
