@@ -200,6 +200,18 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
         # Fallback to hardcoded identity
         stable_parts.append(DEFAULT_AGENT_IDENTITY)
 
+    # IDENTITY.md / BOOTSTRAP.md — supplemental identity files, loaded
+    # independently of SOUL.md so they stay editable separately. Same
+    # gating as SOUL.md so cron/skip_context_files modes behave consistently.
+    if agent.load_soul_identity or not agent.skip_context_files:
+        _identity_content = _r.load_identity_md(_ctx_len)
+        if _identity_content:
+            stable_parts.append(_identity_content)
+
+        _bootstrap_content = _r.load_bootstrap_md(_ctx_len)
+        if _bootstrap_content:
+            stable_parts.append(_bootstrap_content)
+
     # Pointer to the hermes-agent skill + docs for user questions about Hermes itself.
     stable_parts.append(HERMES_AGENT_HELP_GUIDANCE)
 
