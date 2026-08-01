@@ -2043,14 +2043,20 @@ def load_identity_md(context_length: Optional[int] = None) -> Optional[str]:
 
 
 def load_bootstrap_md(context_length: Optional[int] = None) -> Optional[str]:
-    """Load BOOTSTRAP.md from HERMES_HOME and return its content, or None."""
+    """Load BOOTSTRAP.md from HERMES_HOME — but only while bootstrap is
+    incomplete. Once .bootstrap_complete exists, this always returns None,
+    so the first-run interview never re-triggers on later sessions."""
+    home = get_hermes_home()
+    if (home / ".bootstrap_complete").exists():
+        return None
+
     try:
         from hermes_cli.config import ensure_hermes_home
         ensure_hermes_home()
     except Exception as e:
         logger.debug("Could not ensure HERMES_HOME before loading BOOTSTRAP.md: %s", e)
 
-    bootstrap_path = get_hermes_home() / "BOOTSTRAP.md"
+    bootstrap_path = home / "BOOTSTRAP.md"
     if not bootstrap_path.exists():
         return None
     try:
@@ -2061,6 +2067,16 @@ def load_bootstrap_md(context_length: Optional[int] = None) -> Optional[str]:
         content = _truncate_content(
             content, "BOOTSTRAP.md", context_length=context_length,
             read_path=str(bootstrap_path),
+        )
+        # Concrete mechanism note — BOOTSTRAP.md's prose says "flip
+        # bootstrap_complete"; this is what that actually means in practice.
+        content += (
+            "\n\n---\n"
+            "**Mechanism (plumbing, not voice):** once you've written up "
+            f"IDENTITY.md and SOUL.md using write_file at "
+            f"{home / 'IDENTITY.md'} and {home / 'SOUL.md'}, mark bootstrap "
+            f"complete by using write_file to create an empty file at "
+            f"exactly this path: {home / '.bootstrap_complete'}"
         )
         return content
     except Exception as e:
