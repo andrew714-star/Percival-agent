@@ -7596,6 +7596,59 @@ def _schedule_agent_build(sid: str, delay: float = 0.05) -> None:
     timer.start()
 
 
+
+
+def _maybe_kickoff_first_boot_activation(sid: str, session: dict) -> None:
+    """Fire Percival's synthetic first-boot turn — speaking first, unprompted
+    — for a brand-new session opened while BOOTSTRAP.md still exists (i.e.
+    before the persona ritual has completed). No-op once BOOTSTRAP.md is
+    gone, or if this session already has history (a real message beat us
+    to it). Mirrors the auto-continue kickoff pattern below.
+    """
+    try:
+        from hermes_constants import get_hermes_home
+        if not (get_hermes_home() / "BOOTSTRAP.md").exists():
+            return
+    except Exception:
+        return
+    if session.get("history"):
+        return
+
+    def kickoff() -> None:
+        rid = f"__activation__{int(time.time() * 1000)}"
+        try:
+            _start_agent_build(sid, session)
+            err = _wait_agent(session, rid, timeout=120.0)
+        except Exception:
+            logger.warning("activation turn: agent build failed for %s", sid, exc_info=True)
+            return
+        if err:
+            return
+        with session["history_lock"]:
+            if session.get("history") or session.get("running"):
+                # A real message (or another kickoff) beat us to it.
+                return
+            session["running"] = True
+            session["last_active"] = time.time()
+        try:
+            _emit("message.start", sid)
+            _run_prompt_submit(
+                rid, sid, session,
+                "[SYSTEM EVENT: Session start. No one has spoken yet — "
+                "speak first, in your own voice.]",
+                display_kind="hidden",
+            )
+        except Exception as exc:
+            print(
+                f"[tui_gateway] activation turn dispatch failed: "
+                f"{type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            with session["history_lock"]:
+                session["running"] = False
+
+    threading.Thread(target=kickoff, daemon=True, name="activation-kickoff").start()
+
 def _session_pending_kind(sid: str) -> str:
     for rid, (owner_sid, _ev) in list(_pending.items()):
         if owner_sid != sid:
