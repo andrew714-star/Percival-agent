@@ -17334,7 +17334,7 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin, CLIBillingMixin):
                         user_input = self._expand_paste_references(user_input)
                     print()
                     if not is_activation:
-                        self._print_user_message_preview(user_input))
+                        self._print_user_message_preview(user_input)
                     
                     # Show image attachment count
                     if submit_images:
