@@ -122,6 +122,7 @@ def _(rid, params: dict) -> dict:
     # flushed.  This keeps startup responsive while still hydrating tools/skills
     # without requiring the user to submit a first prompt.
     _schedule_agent_build(sid)
+    _maybe_kickoff_first_boot_activation(sid, _sessions[sid])
     _schedule_session_cap_enforcement()  # trim detached idle sessions over the cap
 
     return _ok(
