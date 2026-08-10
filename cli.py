@@ -44,6 +44,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+from hermes_constants import get_hermes_home
 
 logger = logging.getLogger(__name__)
 
@@ -4182,6 +4183,20 @@ class _VoiceInputMessage:
     active, so the concise-voice-response prefix is applied only to messages
     that actually came from the microphone (#65827).
     """
+
+    __slots__ = ("text",)
+
+    def __init__(self, text: str):
+        self.text = text
+
+    def __str__(self) -> str:
+        return self.text
+
+class _ActivationMessage:
+    """Sentinel for the synthetic first-boot turn — Percival speaking first,
+    unprompted, before the user has typed anything. Skips the normal
+    user-input preview so it never renders as if the user typed a system
+    event."""
 
     __slots__ = ("text",)
 
@@ -17210,10 +17225,19 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin, CLIBillingMixin):
                     is_voice_input = isinstance(user_input, _VoiceInputMessage)
                     if is_voice_input:
                         user_input = user_input.text
-
+                    
                     if not user_input:
                         continue
 
+
+                    # Activation messages arrive wrapped in a sentinel so the
+                    # synthetic first-boot trigger never gets echoed as if
+                    # the user typed it.
+                    is_activation = isinstance(user_input, _ActivationMessage)
+                    if is_activation:
+                        user_input = user_input.text
+
+                    
                     # The user has typed and submitted something, so any
                     # post-resize transient suppression should end here.
                     self._status_bar_suppressed_after_resize = False
@@ -17309,7 +17333,8 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin, CLIBillingMixin):
                     if paste_refs:
                         user_input = self._expand_paste_references(user_input)
                     print()
-                    self._print_user_message_preview(user_input)
+                    if not is_activation:
+                        self._print_user_message_preview(user_input))
                     
                     # Show image attachment count
                     if submit_images:
@@ -17407,6 +17432,21 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin, CLIBillingMixin):
         process_thread = threading.Thread(target=process_loop, daemon=True)
         process_thread.start()
 
+
+        # First-boot activation: Percival speaks first, unprompted, only
+        # while BOOTSTRAP.md still exists (its deletion is the completion
+        # signal — see agent/prompt_builder.py:load_bootstrap_md). The
+        # _resumed guard prevents replaying this into an old session that
+        # was saved mid-bootstrap.
+        _bootstrap_path = get_hermes_home() / "BOOTSTRAP.md"
+        if not self._resumed and _bootstrap_path.exists():
+            self._pending_input.put(_ActivationMessage(
+                "[SYSTEM EVENT: Session start. No one has spoken yet — "
+                "speak first, in your own voice.]"
+            ))
+
+        
+        
         # Wake word ("Hey Hermes") — start the always-on hotword listener if
         # enabled. Off-thread so a first-run engine install never blocks the
         # prompt; best-effort, so deps/mic/key gaps are surfaced, never fatal.
